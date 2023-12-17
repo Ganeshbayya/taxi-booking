@@ -1,0 +1,60 @@
+pipeline {
+    agent any
+    stages {
+        
+        stage('Clean Workspace') {
+            steps {
+                cleanWs()
+            }
+        }
+        
+        stage('Checkout'){
+            steps {
+                checkout scmGit(branches: [[name: '*/dev']], extensions: [], userRemoteConfigs: [[credentialsId: 'cat', url: 'https://github.com/Ganeshbayya/taxi-booking.git']])
+            }
+        }
+        
+        stage('MVN Compile'){
+            steps {
+                sh 'mvn clean compile'
+            }
+        }
+        
+        stage('MVN Test'){
+            steps {
+                sh 'mvn test'
+            }
+        }
+        
+        stage('Build War file'){
+            steps {
+                sh 'mvn clean package'
+            }
+        }
+        
+        stage("Deploye to Tomcat"){
+            steps{
+                deploy adapters: [tomcat9(credentialsId: 'cat', path: '', url: 'http://54.219.41.159:8080/')], contextPath: 'Taxi-Booking-Emil notification', war: '**/*.war'
+            }
+        }
+    } 
+    
+    post {
+        always {
+            emailext (
+                subject: "Pipeline Status: ${BUILD_NUMBER}",
+                body: '''<html>
+                          <body>
+                            <p>Build Status: ${BUILD_STATUS}</p>
+                            <p>Build Number: ${BUILD_NUMBER}</p>
+                            <p>Check the <a href="${BUILD_URL}">console output</a>.</p>
+                          </body>
+                        </html>''',
+                to: 'ganeshb3331@gmail.com',
+                from: 'jenkins@example.com',
+                replyTo: 'jenkins@example.com',
+                mimeType: 'text/html'
+            )
+        }
+    }
+}
